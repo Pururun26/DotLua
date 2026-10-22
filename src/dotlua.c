@@ -8,13 +8,17 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include "raylib.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h>   /* va_list для dotlua_err */
+#include <stdarg.h>
 
-/* Дублирует сообщение в stderr (сразу видно) и в dotlua_log.txt (остаётся на диске). */
+/* Дублирует сообщение в stderr и в dotlua_log.txt. */
 static void dotlua_err(const char *fmt, ...) {
     char buf[1024];
     va_list ap;
@@ -33,9 +37,6 @@ static void dotlua_openlibs(lua_State *L) {
     luaL_requiref(L, LUA_TABLIBNAME,   luaopen_table,     1); lua_pop(L, 1);
     luaL_requiref(L, LUA_UTF8LIBNAME,  luaopen_utf8,      1); lua_pop(L, 1);
 
-    /* base открыт — но loadfile/dofile читают файлы с диска,
-       обходя лимит DOTLUA_MAX_SCRIPT_SIZE. Убираем.
-       load оставляем — компилирует строку из памяти, не файл. */
     lua_pushnil(L); lua_setglobal(L, "loadfile");
     lua_pushnil(L); lua_setglobal(L, "dofile");
 }
@@ -68,23 +69,80 @@ static int has_dlua_ext(const char *path) {
     return n >= 5 && strcmp(path + n - 5, ".dlua") == 0;
 }
 
-int main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "usage: %s <cartridge.dlua>\n", argv[0]);
-        return 1;
+/* --- Состояние для главного цикла (нужно emscripten_set_main_loop) --- */
+static lua_State *g_L        = NULL;
+static int        g_show_fps = 0;
+static int        g_running  = 1;
+
+static void frame(void) {
+    if (WindowShouldClose()) {
+        g_running = 0;
+#ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+#endif
+        return;
     }
-    if (!has_dlua_ext(argv[1])) {
-        fprintf(stderr, "dotlua: expected .dlua cartridge, got: %s\n", argv[1]);
+
+#ifndef __EMSCRIPTEN__
+    if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+#endif
+
+    if (IsKeyPressed(KEY_P) && IsKeyDown(KEY_LEFT_CONTROL))
+        g_show_fps = !g_show_fps;
+
+    dotlua_poll_buttons();
+
+    if (call_update(g_L)) {
+        g_running = 0;
+#ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+#endif
+        return;
+    }
+
+    if (g_show_fps) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "FPS:%d", dotlua_fps_get());
+        int len = (int)strlen(buf);
+        int w   = len * 4;
+        dotlua_print(buf, DOTLUA_WIDTH - w + 1, 1, 1);
+    }
+
+    BeginDrawing();
+        ClearBackground(BLACK);
+        dotlua_present();
+    EndDrawing();
+
+    dotlua_fps_frame();
+}
+
+int main(int argc, char **argv) {
+    const char *cart = NULL;
+    char cart_buf[1024];
+
+    if (argc >= 2) {
+        cart = argv[1];
+    } else {
+        /* Нет аргумента — ищем cart.dlua рядом с exe */
+        snprintf(cart_buf, sizeof(cart_buf), "%scart.dlua", GetApplicationDirectory());
+        if (file_size(cart_buf) < 0) {
+            fprintf(stderr, "usage: %s <cartridge.dlua>\n", argv[0]);
+            return 1;
+        }
+        cart = cart_buf;
+    }
+
+    if (!has_dlua_ext(cart)) {
+        fprintf(stderr, "dotlua: expected .dlua cartridge, got: %s\n", cart);
         return 1;
     }
 
     dotlua_log_init();
-    dotlua_log("starting: %s", argv[1]);
+    dotlua_log("starting: %s", cart);
 
-    /* --- проверка размера картриджа --- */
-    long sz = file_size(argv[1]);
+    long sz = file_size(cart);
     if (sz < 0) {
-        dotlua_err("dotlua: cannot read '%s'\n", argv[1]);
+        dotlua_err("dotlua: cannot read '%s'\n", cart);
         dotlua_log_close();
         return 1;
     }
@@ -95,27 +153,27 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    dotlua_save_open(argv[1]);
+    dotlua_save_open(cart);
 
-    lua_State *L = luaL_newstate();
-    if (!L) {
+    g_L = luaL_newstate();
+    if (!g_L) {
         dotlua_err("dotlua: failed to create lua state\n");
         dotlua_log_close();
         return 1;
     }
 
-    dotlua_openlibs(L);
-    dotlua_register_api(L);
+    dotlua_openlibs(g_L);
+    dotlua_register_api(g_L);
 
-    if (luaL_loadfile(L, argv[1]) != LUA_OK) {
-        dotlua_err("dotlua: load error: %s\n", lua_tostring(L, -1));
-        lua_close(L);
+    if (luaL_loadfile(g_L, cart) != LUA_OK) {
+        dotlua_err("dotlua: load error: %s\n", lua_tostring(g_L, -1));
+        lua_close(g_L);
         dotlua_log_close();
         return 1;
     }
-    if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-        dotlua_err("dotlua: runtime error: %s\n", lua_tostring(L, -1));
-        lua_close(L);
+    if (lua_pcall(g_L, 0, 0, 0) != LUA_OK) {
+        dotlua_err("dotlua: runtime error: %s\n", lua_tostring(g_L, -1));
+        lua_close(g_L);
         dotlua_log_close();
         return 1;
     }
@@ -123,44 +181,25 @@ int main(int argc, char **argv) {
     InitWindow(DOTLUA_WINDOW_WIDTH, DOTLUA_WINDOW_HEIGHT, DOTLUA_TITLE);
     InitAudioDevice();
     HideCursor();
+
+#ifndef __EMSCRIPTEN__
     SetWindowState(FLAG_WINDOW_RESIZABLE);
+#endif
     SetTargetFPS(DOTLUA_FPS);
 
     dotlua_api_init();
 
-    int show_fps = 0;                    /* FPS-оверлей выключен по умолчанию */
-
-    while (!WindowShouldClose()) {
-        if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
-
-        if (IsKeyPressed(KEY_P) && IsKeyDown(KEY_LEFT_CONTROL))
-            show_fps = !show_fps;        /* Ctrl+P переключает */
-
-        dotlua_poll_buttons();
-
-        if (call_update(L)) break;
-
-        if (show_fps) {                  /* оверлей: после update, до present */
-            char buf[16];
-            snprintf(buf, sizeof(buf), "FPS:%d", dotlua_fps_get());
-            int len = (int)strlen(buf);
-            int w   = len * 4;           /* 3px глиф + 1px gap, верхняя граница */
-            dotlua_print(buf, DOTLUA_WIDTH - w + 1, 1, 1);
-        }
-
-        BeginDrawing();
-            ClearBackground(BLACK);
-            dotlua_present();
-        EndDrawing();
-
-        dotlua_fps_frame();              /* счётчик: один раз на кадр */
-    }
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(frame, 0, 1);
+#else
+    while (g_running) frame();
 
     dotlua_api_shutdown();
     CloseAudioDevice();
     CloseWindow();
     dotlua_save_close();
-    lua_close(L);
+    lua_close(g_L);
     dotlua_log_close();
+#endif
     return 0;
 }

@@ -6,13 +6,16 @@ A tiny fantasy console for Lua: 96×96, 2 colors, 64 KB per cartridge.
 - Lua 5.4.9, without `io`/`os`/`package`/`debug`
 - 2-color palette, 8×8 sprites, single-channel sound
 
+**The API is stable** — function names, signatures, and behavior won't change. Only cosmetic additions (new functions, examples, docs) may appear.
+
 ## Build
 
 ```bash
-make
+cmake -S . -B build-native
+cmake --build build-native
 ```
 
-Dependencies: MSYS2 UCRT64, `gcc`, `raylib-6.0_win64_mingw-w64`, `lua-5.4.9`.
+Dependencies: CMake, MSYS2 UCRT64 gcc, `raylib-6.0_win64_mingw-w64`, `lua-5.4.9`.
 
 ## Run
 
@@ -20,13 +23,26 @@ Dependencies: MSYS2 UCRT64, `gcc`, `raylib-6.0_win64_mingw-w64`, `lua-5.4.9`.
 ./run.sh examples/snake.dlua
 ```
 
-`run.sh` packs the `.dlua` via `pack.py` and launches `dotlua.exe`.
+`run.sh` packs the `.dlua` via `pack.py` and launches `build-native/dotlua.exe`.
+
+## Web
+
+```bash
+source /c/emsdk/emsdk_env.sh
+emcmake cmake -S . -B build-web
+cmake --build build-web
+```
+
+Deploy 4 files together: `index.html`, `index.js`, `index.wasm`, `cart.dlua`. Test locally over HTTP (not `file://`):
+
+```bash
+cd build-web && python -m http.server 8000
+```
 
 ## Cartridge
 
 A `.dlua` file is a regular Lua script with a `.dlua` extension. Limit — **65536 characters** (code + sprites combined).
 
-Structure:
 ```lua
 --! dfc 1
 
@@ -54,7 +70,7 @@ end
 
 `pack.py` bundles everything into a single file:
 ```bash
-python tools/pack.py examples/my_game/main.dlua -o build/run.dlua
+python tools/pack.py examples/my_game/main.dlua -o build-native/run.dlua
 ```
 
 ## Controls
@@ -150,10 +166,31 @@ beep(freq, dur, vol)      -- tone at freq Hz, dur frames, vol 0..100
 ### Time
 
 ```lua
+time()    -- milliseconds since game start
 utime()   -- Unix timestamp in seconds
 ```
 
-For `math.randomseed(utime())` and "persistent" games.
+`time()` for animation, timers, cooldowns. `utime()` for `math.randomseed(utime())` and persistent games.
+
+### Save
+
+```lua
+dset(slot, value)     -- write int64 to slot (0..63)
+dget(slot)            -- read int64 from slot (0..63)
+```
+
+- **64 slots × 8 bytes = 512 bytes** per cartridge.
+- `dset` writes immediately (crash-safe).
+- Desktop: `save/<cartname>.bin` next to the exe.
+- Web: `localStorage['storage']` (persists across reloads).
+
+```lua
+high = dget(0)
+if score > high then
+    high = score
+    dset(0, high)
+end
+```
 
 ### Standard Lua
 
@@ -192,6 +229,7 @@ end
 - 96×96, 2 colors
 - 65536 characters per cartridge (code + sprites)
 - 256 sprites, 8×8 each
+- 64 save slots × 8 bytes
 - No `require` — modules via `--[[file.lua]]`
 - No `io`/`os`/`package`/`debug` — sandboxed
 - No network, no file I/O (except cartridge loading)
@@ -204,14 +242,21 @@ src/
   dotlua_conf.h        — constants (WIDTH, FPS, colors)
   dotlua_api.c/.h      — C implementation of the API
   dotlua_api_lua.c/.h  — Lua bindings
-  dotlua_log.c/.h      — file logging
+  dotlua_log.c/.h      — logging (file on desktop, console.log on web)
+  dotlua_save.c/.h     — dset/dget (file on desktop, localStorage on web)
   dotlua_font3x4.h     — font
+web/
+  shell.html           — web shell (fetch cart.dlua, canvas CSS)
 tools/
   pack.py              — builds .dlua from main + modules
 examples/
   snake.dlua           — snake
   ...                  — other examples
-build/
-  dotlua.exe           — the console binary
-  dotlua_log.txt       — log of the last run
 ```
+
+## Build outputs
+
+- `build-native/dotlua.exe` — desktop binary
+- `build-native/dotlua_log.txt` — log of the last run
+- `build-native/save/<name>.bin` — save data
+- `build-web/index.html` + `.js` + `.wasm` — web build

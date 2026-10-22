@@ -5,6 +5,7 @@
 #include <math.h>     /* sqrt */
 #include <string.h>   /* memset */
 #include <time.h>
+#include <stdint.h>
 
 unsigned char g_fb[DOTLUA_WIDTH * DOTLUA_HEIGHT];
 Color         g_palette[DOTLUA_COLOR_COUNT];
@@ -13,6 +14,7 @@ static Color   g_pixels[DOTLUA_WIDTH * DOTLUA_HEIGHT];
 static Texture2D g_tex;
 
 void dotlua_api_init(void) {
+    dotlua_time_reset();               /* <-- сброс g_start_ms */
     g_palette[0] = GetColor(DOTLUA_DEFAULT_COLOR_0);
     g_palette[1] = GetColor(DOTLUA_DEFAULT_COLOR_1);
 
@@ -234,9 +236,27 @@ void dotlua_spr(int id, int x, int y) {
 }
 
 
+/* ---------- time (ms since start) ---------- */
+
+static int64_t dotlua_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+}
+
+static int64_t g_start_ms = 0;
+
+void dotlua_time_reset(void) {
+    g_start_ms = dotlua_now_ms();
+}
+
+int64_t dotlua_time(void) {
+    return dotlua_now_ms() - g_start_ms;
+}
+
 /* ---------- utime ---------- */
-long long dotlua_utime(void) {
-    return (long long)time(NULL);
+int64_t dotlua_utime(void) {
+    return (int64_t)time(NULL);
 }
 
 

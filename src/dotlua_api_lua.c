@@ -72,6 +72,11 @@ static int l_spr(lua_State *L) {
     return 0;
 }
 
+static int l_time(lua_State *L) {
+    lua_pushinteger(L, (lua_Integer)dotlua_time());
+    return 1;
+}
+
 static int l_utime(lua_State *L) {
     lua_pushinteger(L, (lua_Integer)dotlua_utime());
     return 1;
@@ -121,6 +126,7 @@ static const luaL_Reg api_funcs[] = {
     {"print",   l_print},
     {"sprdata", l_sprdata},
     {"spr",     l_spr},
+    {"time",    l_time},
     {"utime",   l_utime},
     {"btn",     l_btn},
     {"btnp",    l_btnp},

@@ -1,5 +1,7 @@
 # Build output
 build/
+build-native/
+build-web/
 
 # Object files (если где-то появятся вне build/)
 *.o

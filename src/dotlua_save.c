@@ -3,14 +3,50 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <direct.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(int, dotlua_ls_load, (void *ptr, int size), {
+    try {
+        var b64 = localStorage.getItem('storage');
+        if (!b64) return 0;
+
+        var bin = atob(b64);
+        if (bin.length !== size) return 0;
+
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        HEAPU8.set(bytes, ptr);
+        return 1;
+    } catch (e) {
+        console.error('[DotLua] localStorage read failed:', e);
+        return 0;
+    }
+});
+
+EM_JS(int, dotlua_ls_save, (void *ptr, int size), {
+    try {
+        var bytes = HEAPU8.subarray(ptr, ptr + size);
+        var bin = "";
+        for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        localStorage.setItem('storage', btoa(bin));
+        return 1;
+    } catch (e) {
+        console.error('[DotLua] localStorage write failed:', e);
+        return 0;
+    }
+});
+#endif
 
 #define SAVE_SLOTS  64
-#define SAVE_BYTES  ((int)(SAVE_SLOTS * sizeof(int64_t)))   /* 512 */
 
 static int64_t g_save[SAVE_SLOTS];
-static char    g_save_path[2048];
 static int     g_save_ready = 0;
+
+#ifndef __EMSCRIPTEN__
+static char g_save_path[2048];
+#endif
 
 static void cart_basename(const char *cart_path, char *out, size_t cap) {
     const char *s  = strrchr(cart_path, '/');
@@ -29,21 +65,36 @@ void dotlua_save_open(const char *cart_path) {
     memset(g_save, 0, sizeof(g_save));
     g_save_ready = 0;
 
+#ifdef __EMSCRIPTEN__
+    /* Web: один ключ 'storage' — wasm = одна игра */
+    int loaded = dotlua_ls_load(g_save, (int)sizeof(g_save));
+    TraceLog(LOG_INFO, "DotLua: save %s", loaded ? "loaded" : "fresh");
+#else
     char base[256];
     cart_basename(cart_path, base, sizeof(base));
 
     char dir[1024];
     snprintf(dir, sizeof(dir), "%ssave", GetApplicationDirectory());
-    _mkdir(dir);
+    if (!DirectoryExists(dir)) MakeDirectory(dir);
 
     snprintf(g_save_path, sizeof(g_save_path), "%s/%s.bin", dir, base);
 
-    FILE *f = fopen(g_save_path, "rb");
-    if (f) {
-        size_t r = fread(g_save, 1, sizeof(g_save), f);
-        (void)r;
-        fclose(f);
+    if (FileExists(g_save_path)) {
+        int size = 0;
+        unsigned char *data = LoadFileData(g_save_path, &size);
+        if (data) {
+            if (size == (int)sizeof(g_save)) {
+                memcpy(g_save, data, sizeof(g_save));
+                TraceLog(LOG_INFO, "DotLua: save loaded '%s'", g_save_path);
+            } else {
+                TraceLog(LOG_WARNING, "DotLua: save size %d != %d", size, (int)sizeof(g_save));
+            }
+            UnloadFileData(data);
+        }
+    } else {
+        TraceLog(LOG_INFO, "DotLua: save fresh '%s'", g_save_path);
     }
+#endif
     g_save_ready = 1;
 }
 
@@ -57,10 +108,11 @@ void dotlua_dset(int slot, int64_t value) {
 
     g_save[slot] = value;
 
-    FILE *f = fopen(g_save_path, "wb");
-    if (!f) return;
-    fwrite(g_save, 1, sizeof(g_save), f);
-    fclose(f);
+#ifdef __EMSCRIPTEN__
+    dotlua_ls_save(g_save, (int)sizeof(g_save));
+#else
+    SaveFileData(g_save_path, g_save, sizeof(g_save));
+#endif
 }
 
 int64_t dotlua_dget(int slot) {

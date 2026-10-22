@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <title>DotLua</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #111;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        #container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: block;
+            cursor: none;
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+        #status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            pointer-events: none;
+        }
+        #status.hidden { display: none; }
+        #status.error {
+            color: #ff6b6b;
+            max-width: 80%;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+    <div id="status">Loading...</div>
+
+    <script>
+        var Module = {
+            noInitialRun: true,
+            canvas: (function() { return document.getElementById('canvas'); })(),
+            onRuntimeInitialized: async function() {
+                const ok = await loadCart();
+                if (!ok) return;
+                document.getElementById('status').classList.add('hidden');
+                Module.callMain(['/cart.dlua']);
+            }
+        };
+
+        function setStatus(text, isError) {
+            const el = document.getElementById('status');
+            el.textContent = text;
+            if (isError) el.classList.add('error');
+        }
+
+        async function loadCart() {
+            try {
+                setStatus('Fetching cart.dlua...');
+                const resp = await fetch('cart.dlua');
+                if (!resp.ok) {
+                    setStatus('cart.dlua not found (' + resp.status + '). Place it next to index.html.', true);
+                    return false;
+                }
+                const buf = new Uint8Array(await resp.arrayBuffer());
+                FS.writeFile('/cart.dlua', buf);
+                console.log('[DotLua] cart loaded:', buf.length, 'bytes');
+                return true;
+            } catch (e) {
+                console.error('[DotLua] cart error:', e);
+                setStatus('Failed to load cart: ' + e.message, true);
+                return false;
+            }
+        }
+
+        // Unlock audio on first user interaction (browser autoplay policy)
+        document.addEventListener('click', function once() {
+            document.removeEventListener('click', once);
+            if (typeof Module !== 'undefined' && Module.AL) {
+                try { Module.AL.currentCtx && Module.AL.currentCtx.resume(); } catch (e) {}
+            }
+        });
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

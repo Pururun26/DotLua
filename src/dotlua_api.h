@@ -3,6 +3,8 @@
 #include "dotlua_conf.h"
 #include "raylib.h"
 
+#include <stdint.h>
+
 extern unsigned char g_fb[DOTLUA_WIDTH * DOTLUA_HEIGHT];
 extern Color         g_palette[DOTLUA_COLOR_COUNT];
 
@@ -28,7 +30,9 @@ void dotlua_print(const char *s, int x, int y, int color);
 void dotlua_sprdata(int id, const char *art);
 void dotlua_spr    (int id, int x, int y);
 
-long long dotlua_utime(void);
+int64_t dotlua_time (void);
+int64_t dotlua_utime(void);
+void    dotlua_time_reset(void);
 
 void dotlua_poll_buttons(void);
 int  dotlua_btn (int i);

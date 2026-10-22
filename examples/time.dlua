@@ -1,0 +1,7 @@
+function update()
+    cls(0)
+    print("MS:" .. time(), 0, 10)
+    if time() % 500 > 250 then
+        print("BLINK", 0, 30)
+    end
+end
