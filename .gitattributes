@@ -1,0 +1,21 @@
+# Наши файлы — всегда LF
+* text=auto eol=lf
+
+*.c    text eol=lf
+*.h    text eol=lf
+*.lua  text eol=lf
+*.dlua text eol=lf
+*.py   text eol=lf
+*.sh   text eol=lf
+*.md   text eol=lf
+Makefile text eol=lf
+
+# Вендорные — не трогать (как пришло от авторов)
+raylib/**     -text
+lua-5.4.9/**  -text
+
+# Бинарники
+*.exe  binary
+*.dll  binary
+*.a    binary
+*.o    binary

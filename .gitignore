@@ -1,0 +1,26 @@
+# Build output
+build/
+
+# Object files (если где-то появятся вне build/)
+*.o
+*.obj
+*.a
+
+# Binaries (страховка)
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Logs (dotlua_log.txt уже в build/, но на всякий случай)
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,116 @@
+math.randomseed(utime())
+
+CELL = 8
+GW, GH = 12, 12   -- 96 / 8 = 12
+
+-- Спрайт еды (кружок, чтобы отличался от квадратных сегментов змейки)
+sprdata(0, [[
+33111133
+31111113
+11111111
+11111111
+11111111
+11111111
+31111113
+33111133
+]])
+
+function place_food()
+    for attempt = 1, 200 do
+        local fx = math.random(0, GW - 1)
+        local fy = math.random(0, GH - 1)
+        local ok = true
+        for i = 1, #snake do
+            if snake[i].x == fx and snake[i].y == fy then
+                ok = false
+                break
+            end
+        end
+        if ok then
+            food_x, food_y = fx, fy
+            return
+        end
+    end
+    -- не нашли свободную клетку (змейка почти заполнила поле)
+    food_x, food_y = math.random(0, GW - 1), math.random(0, GH - 1)
+end
+
+function reset()
+    snake = {
+        { x = 2, y = 6 },
+        { x = 1, y = 6 },
+        { x = 0, y = 6 },
+    }
+    dx, dy   = 1, 0
+    ndx, ndy = 1, 0
+    frame    = 0
+    score    = 0
+    gameover = false
+    place_food()
+end
+
+function update()
+    if gameover then
+        cls(0)
+        print("GAME OVER",       22, 32)
+        print("SCORE: " .. score, 20, 44)
+        print("PRESS Z",         28, 60)
+        if btnp(4) then reset() end
+        return
+    end
+
+    -- Смена направления: только edge (btnp), не разворот на 180
+    if btnp(0) and dx ~=  1 then ndx, ndy = -1, 0 end
+    if btnp(1) and dx ~= -1 then ndx, ndy =  1, 0 end
+    if btnp(2) and dy ~=  1 then ndx, ndy = 0, -1 end
+    if btnp(3) and dy ~= -1 then ndx, ndy = 0,  1 end
+
+    -- Ускорение по мере роста: 6 → 5 → 4 → 3 кадра на шаг
+    local tick = math.max(3, 6 - math.floor(score / 3))
+
+    frame = frame + 1
+    if frame % tick == 0 then
+        dx, dy = ndx, ndy
+        local hx = snake[1].x + dx
+        local hy = snake[1].y + dy
+
+        -- Стена
+        if hx < 0 or hx >= GW or hy < 0 or hy >= GH then
+            gameover = true
+            return
+        end
+
+        -- Сам себя (кроме последнего сегмента — он сдвинется)
+        for i = 1, #snake - 1 do
+            if snake[i].x == hx and snake[i].y == hy then
+                gameover = true
+                return
+            end
+        end
+
+        table.insert(snake, 1, { x = hx, y = hy })
+
+        if hx == food_x and hy == food_y then
+            score = score + 1
+            place_food()
+        else
+            table.remove(snake)
+        end
+    end
+
+    -- Рендер
+    cls(0)
+
+    -- Еда
+    spr(0, food_x * CELL, food_y * CELL)
+
+    -- Тело змейки
+    for i = 1, #snake do
+        rect(snake[i].x * CELL, snake[i].y * CELL, CELL, CELL, 1)
+    end
+
+    -- Счёт
+    print("S:" .. score, 0, 0)
+end
+
+reset()

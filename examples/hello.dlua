@@ -1,0 +1,7 @@
+function update()
+    cls(0)
+    print("HELLO WORLD", 0, 0)
+    print("SECOND LINE", 0, 6)
+    print("WRAP NOT WORKING, TEXT CLIPS AT 96", 0, 20)  -- уйдёт за правый край
+    print("1234567890!?", 0, 30)
+end

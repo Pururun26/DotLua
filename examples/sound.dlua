@@ -1,0 +1,20 @@
+function update()
+    cls(0)
+    print("BEEP TEST", 0, 0)
+    print("Z: C4", 0, 30)
+    print("X: E4", 0, 36)
+    print("Z+X: CHORD? NO", 0, 42)
+    print("A (Z+UP): NOISE", 0, 48)
+
+    -- нота C4
+    if btnp(4) then beep(262, 15) end
+
+    -- нота E4 (короткая)
+    if btnp(5) then beep(330, 8) end
+
+    -- высокий писк
+    if btnp(2) then beep(880, 4, 50) end
+
+    -- тишина
+    if btnp(0) then beep(0, 0, 0) end
+end
