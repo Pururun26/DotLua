@@ -307,6 +307,13 @@ static void beep_gen_square(short *s, int n, float freq, int vol) {
     }
 }
 
+static void beep_gen_noise(short *s, int n, int vol) {
+    for (int i = 0; i < n; i++) {
+        float v = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;   /* -1..+1 */
+        s[i] = (short)(v * vol * 327.67f);
+    }
+}
+
 static void beep_stop(void) {
     if (g_beep_used) {
         StopSound(g_beep_sound);
@@ -318,15 +325,17 @@ static void beep_stop(void) {
 void dotlua_beep(int freq, int dur, int vol) {
     if (!IsAudioDeviceReady()) return;
 
-    if (freq <= 0 || dur <= 0 || vol <= 0) {
+    /* тишина: dur=0 или vol=0. freq=0 — это шум, не тишина */
+    if (dur <= 0 || vol <= 0) {
         beep_stop();
         return;
     }
 
     /* клампим, чтобы не словить переполнение/огромный malloc */
-    if (freq >  8000) freq =  8000;
-    if (dur  >   255) dur  =   255;
-    if (vol  >   100) vol  =   100;
+    if (freq <  0)    freq = 0;
+    if (freq >  8000) freq = 8000;
+    if (dur  >   255) dur  = 255;
+    if (vol  >   100) vol  = 100;
 
     float duration_sec = (float)dur / (float)DOTLUA_FPS;
     int   n = (int)(BEEP_SAMPLE_RATE * duration_sec);
@@ -335,7 +344,8 @@ void dotlua_beep(int freq, int dur, int vol) {
     short *samples = (short *)malloc(n * sizeof(short));
     if (!samples) return;
 
-    beep_gen_square(samples, n, (float)freq, vol);
+    if (freq == 0) beep_gen_noise  (samples, n, vol);              /* шум */
+    else           beep_gen_square (samples, n, (float)freq, vol); /* квадрат */
 
     Wave wave = {
         .frameCount = (unsigned int)n,
