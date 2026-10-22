@@ -1,0 +1,16 @@
+-- Загружаем текущее значение из слота 0
+counter = dget(0)
+
+function update()
+    if btnp(4) then
+        counter = counter + 1
+        dset(0, counter)
+    end
+    if btnp(5) then
+        counter = 0
+        dset(0, counter)
+    end
+
+    cls(0)
+    print("COUNTER:" .. counter, 0, 10)
+end

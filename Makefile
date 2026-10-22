@@ -55,7 +55,7 @@ LUA_OBJ := $(patsubst lua-5.4.9/%.c,$(OBJDIR)/lua/%.o,$(LUA_SRC))
 LUA_LIB := $(LIBDIR)/liblua_dotlua.a
 
 # --- DotLua ---
-APP_SRC := src/dotlua.c src/dotlua_api.c src/dotlua_api_lua.c src/dotlua_log.c
+APP_SRC := src/dotlua.c src/dotlua_api.c src/dotlua_api_lua.c src/dotlua_log.c src/dotlua_save.c
 APP_OBJ := $(patsubst src/%.c,$(OBJDIR)/app/%.o,$(APP_SRC))
 
 TARGET  := $(BUILD)/dotlua.exe

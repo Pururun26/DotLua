@@ -2,6 +2,7 @@
 #include "dotlua_api.h"
 #include "dotlua_api_lua.h"
 #include "dotlua_log.h"
+#include "dotlua_save.h"
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -94,6 +95,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    dotlua_save_open(argv[1]);
+
     lua_State *L = luaL_newstate();
     if (!L) {
         dotlua_err("dotlua: failed to create lua state\n");
@@ -156,6 +159,7 @@ int main(int argc, char **argv) {
     dotlua_api_shutdown();
     CloseAudioDevice();
     CloseWindow();
+    dotlua_save_close();
     lua_close(L);
     dotlua_log_close();
     return 0;

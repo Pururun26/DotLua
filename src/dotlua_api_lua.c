@@ -1,6 +1,7 @@
 #include "dotlua_api_lua.h"
 #include "dotlua_api.h"
 #include "dotlua_conf.h"
+#include "dotlua_save.h"
 
 static int l_cls(lua_State *L) {
     int c = (int)luaL_optinteger(L, 1, 0);
@@ -96,6 +97,19 @@ static int l_beep(lua_State *L) {
     return 0;
 }
 
+static int l_dset(lua_State *L) {
+    int slot = (int)luaL_checkinteger(L, 1);
+    lua_Integer value = luaL_checkinteger(L, 2);
+    dotlua_dset(slot, (int64_t)value);
+    return 0;
+}
+
+static int l_dget(lua_State *L) {
+    int slot = (int)luaL_checkinteger(L, 1);
+    lua_pushinteger(L, (lua_Integer)dotlua_dget(slot));
+    return 1;
+}
+
 
 static const luaL_Reg api_funcs[] = {
     {"cls",     l_cls},
@@ -111,6 +125,8 @@ static const luaL_Reg api_funcs[] = {
     {"btn",     l_btn},
     {"btnp",    l_btnp},
     {"beep",    l_beep},
+    {"dset",    l_dset},
+    {"dget",    l_dget},
     {NULL, NULL}
 };
 
