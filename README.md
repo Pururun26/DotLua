@@ -158,7 +158,7 @@ btnp(i)  -- true only on the frame of press (0..5)
 beep(freq, dur, vol)      -- tone at freq Hz, dur frames, vol 0..100
 ```
 
-- Single channel (monophonic, like Nokia 3310).
+- Single channel (monophonic).
 - `dur` in frames: `15` = 0.5 s, `30` = 1 s (at 30 FPS).
 - `beep(0, 0, 0)` — silence.
 - A new `beep` interrupts the current one.
