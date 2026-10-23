@@ -1,0 +1,16 @@
+function update()
+    cls(0)
+    print("UTF8 TEST", 4, 4)
+
+    if utf8 == nil then
+        print("utf8 = NIL (OK)", 4, 14)
+    else
+        print("utf8 = EXISTS", 4, 14)
+        print("type: " .. type(utf8), 4, 24)
+    end
+
+    -- попробуем вызвать (должно упасть, если nil)
+    if utf8 ~= nil then
+        print("char(65): " .. utf8.char(65), 4, 34)
+    end
+end

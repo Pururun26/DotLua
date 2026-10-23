@@ -49,7 +49,6 @@ set(LUA_SRC
     ${LUA_DIR}/ltablib.c
     ${LUA_DIR}/ltm.c
     ${LUA_DIR}/lundump.c
-    ${LUA_DIR}/lutf8lib.c
     ${LUA_DIR}/lvm.c
     ${LUA_DIR}/lzio.c
 )

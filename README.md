@@ -194,7 +194,7 @@ end
 
 ### Standard Lua
 
-`math`, `string`, `table`, `utf8`, `coroutine` are available. **No** `io`, `os`, `package`, `debug`, `loadfile`, `dofile`. `load` (for strings) is available.
+`math`, `string`, `table`, `coroutine` are available. **No** `io`, `os`, `package`, `debug`, `loadfile`, `dofile`. `load` (for strings) is available.
 
 ## Example: mini-game
 

@@ -63,7 +63,6 @@ set(LUA_SRC
     lua-5.4.9/ltablib.c
     lua-5.4.9/ltm.c
     lua-5.4.9/lundump.c
-    lua-5.4.9/lutf8lib.c
     lua-5.4.9/lvm.c
     lua-5.4.9/lzio.c
 )

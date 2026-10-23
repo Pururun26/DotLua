@@ -1,4 +1,5 @@
 Windows (MSYS2)
+C:\home\pururun\Dev\DotLua\src\system\libretro
 rm -rf build-libretro
 cmake -S . -B build-libretro -DCMAKE_BUILD_TYPE=Release
 cmake --build build-libretro
@@ -14,6 +15,7 @@ ls -lh build-linux/dotlua_libretro.so
 
 ANDROID
 rm -rf build-android
+export ANDROID_NDK_HOME=~/android-ndk-r26d
 cmake -S . -B build-android \
   -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
   -DANDROID_ABI=arm64-v8a \
