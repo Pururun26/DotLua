@@ -4,6 +4,7 @@ cmake --build build-native
 ./build-native/dotlua.exe examples/snake.dlua
 
 # web
+source /c/emsdk/emsdk_env.sh
 emcmake cmake -S . -B build-web
 cmake --build build-web
 cd build-web && python -m http.server 8000

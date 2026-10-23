@@ -1,28 +1,38 @@
-# Build output
+# Object files (только в build, вендор не трогаем)
+build*/**/*.o
+build*/**/*.obj
+build*/**/*.a
+build*/**/*.lib
+
+# Binaries (только в build)
+build*/**/*.exe
+build*/**/*.dll
+build*/**/*.so
+build*/**/*.dylib
+
+# Всё остальное — как было
 build/
-build-native/
-build-web/
+build-*/
 
-# Object files (если где-то появятся вне build/)
-*.o
-*.obj
-*.a
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
 
-# Binaries (страховка)
-*.exe
-*.dll
-*.so
-*.dylib
+save/
+*.srm
+*.state
 
-# Logs (dotlua_log.txt уже в build/, но на всякий случай)
 *.log
+dotlua_log.txt
 
-# Editor / IDE
 .vscode/
 .idea/
 *.swp
 *~
+.clangd/
+.cache/
 
-# OS junk
 .DS_Store
 Thumbs.db
+desktop.ini

@@ -1,0 +1,12 @@
+display_name = "DotLua"
+authors = "Pururun26"
+supported_extensions = "dlua"
+corename = "DotLua"
+manufacturer = "Pururun26"
+categories = "Fantasy Console"
+systemname = "DotLua"
+license = "MIT"
+permissions = ""
+display_version = "1.0.1"
+
+[Features]
