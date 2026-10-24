@@ -112,7 +112,6 @@ if(EMSCRIPTEN)
 # ============================================================
 else()
 
-    # Выкинуть неиспользуемые функции/данные (требует -ffunction-sections -fdata-sections)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(dotlua PRIVATE
             -ffunction-sections
@@ -123,7 +122,6 @@ else()
     if(WIN32)
         target_link_libraries(dotlua PRIVATE ${RAYLIB_LIB_NAME} lua
             opengl32 gdi32 winmm shell32)
-        # Один exe без DLL:
         target_link_options(dotlua PRIVATE
             -static -static-libgcc -static-libstdc++
             -lpthread
@@ -141,10 +139,21 @@ else()
             ${COREVIDEO_LIBRARY} ${OPENGL_LIBRARY})
         target_link_options(dotlua PRIVATE -Wl,-dead_strip -s)
     else()
+        # Linux: статическая raylib → один файл без libraylib.so
         find_package(Threads REQUIRED)
-        target_link_libraries(dotlua PRIVATE ${RAYLIB_LIB_NAME} lua
-            m ${CMAKE_DL_LIBS} Threads::Threads)
-        target_link_options(dotlua PRIVATE -Wl,--gc-sections -s)
+        target_link_libraries(dotlua PRIVATE
+            "${RAYLIB_DIR}/lib/libraylib.a"
+            lua
+            m ${CMAKE_DL_LIBS} Threads::Threads
+            dl pthread
+            X11 Xrandr Xi Xcursor Xinerama
+            GL asound
+        )
+        target_link_options(dotlua PRIVATE
+            -static-libgcc -static-libstdc++
+            -Wl,--gc-sections
+            -s
+        )
     endif()
 
     message(STATUS "Target: native (dotlua${CMAKE_EXECUTABLE_SUFFIX})")

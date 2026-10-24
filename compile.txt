@@ -3,6 +3,12 @@ cmake -S . -B build-native
 cmake --build build-native
 ./build-native/dotlua.exe examples/snake.dlua
 
+#linux
+cd /mnt/c/home/pururun/Dev/DotLua/
+cmake -S . -B build-linux-desktop -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux-desktop
+
+
 # web
 source /c/emsdk/emsdk_env.sh
 emcmake cmake -S . -B build-web

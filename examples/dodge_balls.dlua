@@ -1,0 +1,319 @@
+-- >>> sprites.lua
+sprdata(1, [[
+########
+#000000#
+#0#00#0#
+#000000#
+#000000#
+#0####0#
+#000000#
+########
+]])
+
+sprdata(2, [[
+33####33
+3######3
+########
+########
+########
+########
+3######3
+33####33
+]])
+-- <<< sprites.lua
+-- >>> init.lua
+function init_game()
+    math.randomseed(utime())
+
+    player = {}
+    player.sp = 1
+    player.x = 44
+    player.y = 60
+    player.sx = 0
+    player.sy = 0
+    player.w = 8
+    player.h = 8
+
+    -- ENEMIES --
+    enemies = {}
+
+    local my_enemy = {}
+    my_enemy.sp = 2
+    my_enemy.x = math.random(0, 120)
+    my_enemy.y = 8
+
+    my_enemy.sx = math.random(-1, 1)
+    if my_enemy.sx == 0 then my_enemy.sx = 1 end
+
+    my_enemy.sy = math.random(-1, 1)
+    if my_enemy.sy == 0 then my_enemy.sy = 1 end
+
+    my_enemy.w = 8
+    my_enemy.h = 8
+
+    table.insert(enemies, my_enemy)
+
+    -- timer_spawn_enemy
+    ts_enemy = 0
+    enemy_frame = 0
+
+    high_score = dget(0)
+    score = 0
+
+    mode = "START"
+
+    blinkt = 1
+    blink_flame = 0
+end
+-- <<< init.lua
+-- >>> update.lua
+
+function update_start()
+    if btnp(4) then
+        mode = "GAME"
+    end
+end
+
+function update_game()
+    player.sx = 0
+    player.sy = 0
+
+    if btn(0) then
+        player.sx = -1
+    end
+    if btn(1) then
+        player.sx = 1
+    end
+    if btn(2) then
+        player.sy = -1
+    end
+    if btn(3) then
+        player.sy = 1
+    end
+
+    player.x = player.x + player.sx
+    player.y = player.y + player.sy
+
+    -- PROVERKA STOLKNOVENIE --
+    if player.x > 88 then player.x = 88 end
+    if player.x < 0  then player.x = 0  end
+    if player.y > 88 then player.y = 88 end
+    if player.y < 0  then player.y = 0  end
+
+    -- SPAVN VRAGOV --
+    enemy_spawn()
+    -- OBNOVLENIE VRAGOV --
+    update_enemies()
+end
+
+function update_over()
+    if btnp(4) then
+        init_game()
+        mode = "START"
+    end
+end
+
+
+function update_enemies()
+    -- 1) движение и отбивание от стен
+    for i, e in ipairs(enemies) do
+        e.x = e.x + e.sx
+        e.y = e.y + e.sy
+
+        if collision_rect(player, e) then
+            if score > high_score then
+                high_score = score
+                dset(0, high_score)
+            end
+            mode = "OVER"
+        end
+
+        if e.x >= 88 then
+            e.sx = -e.sx
+            e.x = 86
+            beep(440, 1, 90)
+        end
+        if e.x <= 0 then
+            e.sx = math.abs(e.sx)
+            e.x = 4
+            beep(440, 1, 90)
+        end
+        if e.y >= 88 then
+            e.sy = -e.sy
+            e.y = 86
+            beep(440, 1, 90)
+        end
+        if e.y <= 0 then
+            e.sy = math.abs(e.sy)
+            e.y = 4
+            beep(440, 1, 90)
+        end
+    end
+
+    -- 2) столкновения врагов друг с другом
+    for i = 1, #enemies - 1 do
+        local a = enemies[i]
+        for j = i + 1, #enemies do
+            local b = enemies[j]
+
+            if collision_rect(a, b) then
+                beep(440, 1, 90)
+                -- центры
+                local acx, acy = a.x + a.w / 2, a.y + a.h / 2
+                local bcx, bcy = b.x + b.w / 2, b.y + b.h / 2
+
+                -- перекрытие по осям
+                local overlap_x = (a.w + b.w) / 2 - math.abs(acx - bcx)
+                local overlap_y = (a.h + b.h) / 2 - math.abs(acy - bcy)
+
+                if overlap_x < overlap_y then
+                    -- столкнулись по горизонтали
+                    a.sx, b.sx = b.sx, a.sx
+
+                    -- раздвигаем ровно на overlap_x, целыми числами
+                    local push_a = math.ceil(overlap_x / 2)
+                    local push_b = math.floor(overlap_x / 2)
+
+                    if acx < bcx then
+                        a.x = a.x - push_a
+                        b.x = b.x + push_b
+                    else
+                        a.x = a.x + push_a
+                        b.x = b.x - push_b
+                    end
+                else
+                    -- столкнулись по вертикали
+                    a.sy, b.sy = b.sy, a.sy
+
+                    local push_a = math.ceil(overlap_y / 2)
+                    local push_b = math.floor(overlap_y / 2)
+
+                    if acy < bcy then
+                        a.y = a.y - push_a
+                        b.y = b.y + push_b
+                    else
+                        a.y = a.y + push_a
+                        b.y = b.y - push_b
+                    end
+                end
+            end
+        end
+    end
+end
+--]]
+-- <<< update.lua
+-- >>> draw.lua
+function draw_start()
+    cls()
+    print("DODGE BALLS", 26, 34)
+    print("SCORE:"..high_score, 1, 1)
+    print("PRESS (Z/J) TO START", 11, 64, blink())
+end
+
+function draw_game()
+    cls(2)
+    spr(player.sp, player.x, player.y)
+    draw_enemies()
+
+    print("SCORE:"..#enemies, 1, 1)
+end
+
+function draw_over()
+    cls(2)
+    print("GAME OVER", 30, 34)
+    print("SCORE:"..#enemies, 1, 1)
+    print("PRESS (Z/J) TO START", 11, 64, blink())
+end
+
+
+-- Рисуем врагов
+function draw_enemies()
+    for i, my_enemy in ipairs(enemies) do
+        spr(my_enemy.sp, my_enemy.x, my_enemy.y)
+    end
+end
+-- <<< draw.lua
+-- >>> collision.lua
+function collision_rect(a, b)
+    -- TABLE A AND B --
+    local a_left = a.x
+    local a_top = a.y
+    local a_right = a.x + a.w - 1
+    local a_bottom = a.y + a.h - 1
+
+    local b_left = b.x
+    local b_top = b.y
+    local b_right = b.x + b.w - 1
+    local b_bottom = b.y + b.h - 1
+
+    if a_left > b_right then return false end
+    if b_left > a_right then return false end
+    if a_top > b_bottom then return false end
+    if b_top > a_bottom then return false end
+
+    return true
+end
+-- <<< collision.lua
+-- >>> tools.lua
+function enemy_spawn()
+    enemy_frame = enemy_frame + 1
+
+    if enemy_frame >= 30 then
+        enemy_frame = 0
+        ts_enemy = ts_enemy + 1
+        if ts_enemy > 5 then
+            ts_enemy = 0
+            
+            -- SPAWN ENEMY --
+            local my_enemy = {}
+            my_enemy.sp = 2
+            my_enemy.x = math.random(0, 88)
+            my_enemy.y = 8
+
+            my_enemy.sx = math.random(-1, 1)
+            if my_enemy.sx == 0 then my_enemy.sx = 1 end
+
+            my_enemy.sy = math.random(-1, 1)
+            if my_enemy.sy == 0 then my_enemy.sy = 1 end
+
+            my_enemy.w = 8
+            my_enemy.h = 8
+
+            table.insert(enemies, my_enemy)
+            score = #enemies
+        end
+    end
+
+    -- return ts_enemy
+end
+
+function blink()
+    local baim = { 1, 1, 1, 1, 1, 0 }
+
+    blink_flame = blink_flame + 1
+    if blink_flame > 6 then
+        blink_flame = 0
+        if blinkt >= #baim then
+            blinkt = 1
+        else
+            blinkt = blinkt + 1
+        end
+    end
+
+    return baim[blinkt]
+end
+-- <<< tools.lua
+
+init_game()
+function update()
+    if mode == "START" then
+        update_start()
+        draw_start()
+    elseif mode == "GAME" then
+        update_game()
+        draw_game()
+    elseif mode == "OVER" then
+        update_over()
+        draw_over()
+    end
+end
