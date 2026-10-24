@@ -3,6 +3,8 @@
 #include "dotlua_api_lua.h"
 #include "dotlua_log.h"
 #include "dotlua_save.h"
+#include "dotlua_console.h"
+#include "dotlua_license.h"
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -116,6 +118,39 @@ static void frame(void) {
 }
 
 int main(int argc, char **argv) {
+    // CLI-флаги (до InitWindow, до Lua, до поиска картриджа)
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--license") == 0) {
+            dotlua_console_attach();
+            printf("\n%s", DOTLUA_LICENSE_TEXT);
+            fflush(stdout);
+            dotlua_console_detach();
+            return 0;
+        }
+
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            dotlua_console_attach();
+            printf("\nDotLua " DOTLUA_VERSION " - a tiny fantasy console for Lua\n\n");
+            printf("Usage:\n");
+            printf("  dotlua.exe                  run cart.dlua next to the exe\n");
+            printf("  dotlua.exe mygame.dlua      run a specific cartridge\n");
+            printf("  dotlua.exe --license        show licenses\n");
+            printf("  dotlua.exe --help           show this help\n");
+            printf("  dotlua.exe --version        show version\n");
+            fflush(stdout);
+            dotlua_console_detach();
+            return 0;
+        }
+
+        if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-v") == 0) {
+            dotlua_console_attach();
+            printf("DotLua v%s\n", DOTLUA_VERSION);
+            fflush(stdout);
+            dotlua_console_detach();
+            return 0;
+        }
+    }
+
     const char *cart = NULL;
     char cart_buf[1024];
 

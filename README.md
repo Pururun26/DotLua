@@ -260,3 +260,8 @@ examples/
 - `build-native/dotlua_log.txt` — log of the last run
 - `build-native/save/<name>.bin` — save data
 - `build-web/index.html` + `.js` + `.wasm` — web build
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+Bundled: Lua 5.4.9 (MIT), raylib 6.0 (zlib) — full texts in `--license`.

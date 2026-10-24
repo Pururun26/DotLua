@@ -1,0 +1,80 @@
+math.randomseed(utime())
+
+GRAVITY = 0.4
+BOUNCE  = -3.2
+FLOOR   = 88
+
+ball = { x = 20, y = FLOOR, vy = 0, r = 3 }
+rings = {}
+score = 0
+
+function place_rings()
+    rings = {}
+    for i = 1, 8 do
+        rings[i] = {
+            x = math.random(8, 88),
+            y = math.random(15, 75),
+            taken = false
+        }
+    end
+    score = 0
+end
+
+function update()
+    -- Управление: ←→ двигают, Z прыгает выше
+    if btn(0) then ball.x = ball.x - 2 end
+    if btn(1) then ball.x = ball.x + 2 end
+
+    -- Гравитация
+    ball.vy = ball.vy + GRAVITY
+    ball.y  = ball.y + ball.vy
+
+    -- Отскок от пола
+    if ball.y >= FLOOR then
+        ball.y  = FLOOR
+        ball.vy = BOUNCE
+        if btn(4) then ball.vy = BOUNCE * 1.5 end   -- Z = прыжок выше
+    end
+
+    -- Потолок и стены
+    if ball.y < 5  then ball.y = 5;  ball.vy = -ball.vy end
+    if ball.x < 5  then ball.x = 5  end
+    if ball.x > 91 then ball.x = 91 end
+
+    -- Сбор колец
+    for i = 1, #rings do
+        local r = rings[i]
+        if not r.taken then
+            local dx = ball.x - r.x
+            local dy = ball.y - r.y
+            if dx*dx + dy*dy < 36 then   -- радиус 6
+                r.taken = true
+                score = score + 1
+                beep(880, 3, 80)
+            end
+        end
+    end
+
+    -- Все собраны — новый уровень
+    if score >= #rings then
+        place_rings()
+        beep(1200, 8, 80)
+    end
+
+    -- Рендер
+    cls(0)
+
+    -- пол
+    for x = 0, 95 do pset(x, 92, 1) end
+
+    -- кольца
+    for i = 1, #rings do
+        local r = rings[i]
+        if not r.taken then oval(r.x - 3, r.y - 3, 6, 6, 1) end
+    end
+
+    -- мяч
+    oval(math.floor(ball.x) - ball.r, math.floor(ball.y) - ball.r, ball.r*2, ball.r*2, 1)
+
+    print("RINGS:" .. score .. "/" .. #rings, 2, 2)
+end

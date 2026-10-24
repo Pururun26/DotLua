@@ -17,7 +17,7 @@ import re
 import sys
 
 MAX_DEPTH   = 16
-INCLUDE_RE  = re.compile(r'^--\[\[(.+\.lua)\]\]$')
+INCLUDE_RE  = re.compile(r'^--\s*\[\[(.+\.lua)\]\]$')
 
 
 def parse_include(line):
